@@ -1,39 +1,27 @@
 import { google } from 'googleapis';
-import { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SHEETS_ID } from '$env/static/private';
-
-// We'll validate these at runtime in the function to avoid module-level errors
+import { env } from '$env/dynamic/private';
 
 let cachedData = null;
 let cacheTimestamp = null;
 
-// Try to get CACHE_DURATION from environment, fallback to default
-let cacheDurationEnv;
-try {
-	cacheDurationEnv = process.env.CACHE_DURATION;
-} catch (e) {
-	// Environment variable access might fail during build
-	cacheDurationEnv = null;
-}
-const CACHE_DURATION_MS = parseInt(cacheDurationEnv) || 3600000; // Default 1 hour
-
 async function getAuthClient() {
 	// Validate environment variables at runtime
-	if (!GOOGLE_SERVICE_ACCOUNT_EMAIL) {
+	if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
 		throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is required');
 	}
-	if (!GOOGLE_PRIVATE_KEY) {
+	if (!env.GOOGLE_PRIVATE_KEY) {
 		throw new Error('GOOGLE_PRIVATE_KEY environment variable is required');
 	}
-	if (!GOOGLE_SHEETS_ID) {
+	if (!env.GOOGLE_SHEETS_ID) {
 		throw new Error('GOOGLE_SHEETS_ID environment variable is required');
 	}
 	
 	// Handle the private key - it might be wrapped in quotes and have escaped newlines
-	let privateKey = GOOGLE_PRIVATE_KEY;
+	let privateKey = env.GOOGLE_PRIVATE_KEY;
 	
 	// Log initial key info for debugging (without exposing the actual key)
 	console.log('Private key initial length:', privateKey?.length || 'undefined');
-	console.log('Service account email:', GOOGLE_SERVICE_ACCOUNT_EMAIL);
+	console.log('Service account email:', env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
 	
 	// Remove surrounding quotes if present
 	if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
@@ -54,7 +42,7 @@ async function getAuthClient() {
 	try {
 		// Create auth client using JWT with the object form
 		const auth = new google.auth.JWT({
-			email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+			email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
 			key: privateKey,
 			scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
 		});
@@ -73,7 +61,7 @@ async function getAuthClient() {
 		try {
 			console.log('Attempting older JWT constructor syntax...');
 			const auth = new google.auth.JWT(
-				GOOGLE_SERVICE_ACCOUNT_EMAIL,
+				env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
 				null,
 				privateKey,
 				['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -90,6 +78,9 @@ async function getAuthClient() {
 }
 
 export async function fetchSheetData() {
+	// Get cache duration from environment with fallback
+	const CACHE_DURATION_MS = parseInt(env.CACHE_DURATION) || 3600000; // Default 1 hour
+	
 	// Check cache
 	if (cachedData && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION_MS) {
 		return cachedData;
@@ -99,14 +90,14 @@ export async function fetchSheetData() {
 		const auth = await getAuthClient();
 		const sheets = google.sheets({ version: 'v4', auth });
 		
-		console.log('Attempting to fetch spreadsheet:', GOOGLE_SHEETS_ID);
+		console.log('Attempting to fetch spreadsheet:', env.GOOGLE_SHEETS_ID);
 		console.log('Sheet range: LPP!A:Z');
 		
 		// First, try to get the spreadsheet metadata to see what sheets exist
 		try {
 			console.log('Checking spreadsheet metadata...');
 			const metadataResponse = await sheets.spreadsheets.get({
-				spreadsheetId: GOOGLE_SHEETS_ID
+				spreadsheetId: env.GOOGLE_SHEETS_ID
 			});
 			
 			const sheetNames = metadataResponse.data.sheets.map(sheet => sheet.properties.title);
@@ -118,7 +109,7 @@ export async function fetchSheetData() {
 				if (sheetNames.length > 0) {
 					console.log('Trying first available sheet:', sheetNames[0]);
 					const response = await sheets.spreadsheets.values.get({
-						spreadsheetId: GOOGLE_SHEETS_ID,
+						spreadsheetId: env.GOOGLE_SHEETS_ID,
 						range: `${sheetNames[0]}!A:Z`,
 					});
 					
@@ -138,7 +129,7 @@ export async function fetchSheetData() {
 		
 		// Fetch the LPP sheet
 		const response = await sheets.spreadsheets.values.get({
-			spreadsheetId: GOOGLE_SHEETS_ID,
+			spreadsheetId: env.GOOGLE_SHEETS_ID,
 			range: 'LPP!A:Z', // Adjust range as needed
 		});
 
@@ -152,7 +143,7 @@ export async function fetchSheetData() {
 		return rows;
 	} catch (error) {
 		console.error('Error fetching sheet data:', error);
-		console.error('Spreadsheet ID being used:', GOOGLE_SHEETS_ID);
+		console.error('Spreadsheet ID being used:', env.GOOGLE_SHEETS_ID);
 		console.error('Error details:', {
 			message: error.message,
 			code: error.code,
@@ -165,7 +156,7 @@ export async function fetchSheetData() {
 			console.error('1. The spreadsheet ID is incorrect');
 			console.error('2. The service account doesn\'t have access to the spreadsheet');
 			console.error('3. The sheet name "LPP" doesn\'t exist');
-			console.error('Make sure to share the spreadsheet with:', GOOGLE_SERVICE_ACCOUNT_EMAIL);
+			console.error('Make sure to share the spreadsheet with:', env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
 		}
 		
 		// Return cached data if available, even if expired
