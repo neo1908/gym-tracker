@@ -1,10 +1,10 @@
-import { google } from 'googleapis';
+import { JWT } from 'google-auth-library';
 import { env } from '$env/dynamic/private';
 
 let cachedData = null;
 let cacheTimestamp = null;
 
-async function getAuthClient() {
+async function getAccessToken() {
 	// Validate environment variables at runtime
 	if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
 		throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is required');
@@ -40,40 +40,23 @@ async function getAuthClient() {
 	console.log('Private key begins with:', privateKey.substring(0, 27));
 	
 	try {
-		// Create auth client using JWT with the object form
-		const auth = new google.auth.JWT({
+		// Create JWT client
+		const jwtClient = new JWT({
 			email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
 			key: privateKey,
 			scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
 		});
 		
-		// Test the authentication
-		console.log('Attempting to authorize JWT...');
-		await auth.authorize();
+		// Get access token
+		console.log('Attempting to get access token...');
+		const accessToken = await jwtClient.getAccessToken();
 		console.log('Google Sheets authentication successful');
 		
-		return auth;
+		return accessToken.token;
 	} catch (error) {
 		console.error('JWT Authentication error:', error.message);
 		console.error('Full error:', error);
-		
-		// Try the older JWT constructor syntax
-		try {
-			console.log('Attempting older JWT constructor syntax...');
-			const auth = new google.auth.JWT(
-				env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-				null,
-				privateKey,
-				['https://www.googleapis.com/auth/spreadsheets.readonly']
-			);
-			
-			await auth.authorize();
-			console.log('Older JWT syntax successful');
-			return auth;
-		} catch (oldError) {
-			console.error('Older JWT syntax also failed:', oldError.message);
-			throw error; // Throw original error
-		}
+		throw error;
 	}
 }
 
@@ -87,8 +70,7 @@ export async function fetchSheetData() {
 	}
 
 	try {
-		const auth = await getAuthClient();
-		const sheets = google.sheets({ version: 'v4', auth });
+		const accessToken = await getAccessToken();
 		
 		console.log('Attempting to fetch spreadsheet:', env.GOOGLE_SHEETS_ID);
 		console.log('Sheet range: LPP!A:Z');
@@ -96,11 +78,20 @@ export async function fetchSheetData() {
 		// First, try to get the spreadsheet metadata to see what sheets exist
 		try {
 			console.log('Checking spreadsheet metadata...');
-			const metadataResponse = await sheets.spreadsheets.get({
-				spreadsheetId: env.GOOGLE_SHEETS_ID
+			const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}`;
+			const metadataResponse = await fetch(metadataUrl, {
+				headers: {
+					'Authorization': `Bearer ${accessToken}`,
+					'Content-Type': 'application/json'
+				}
 			});
 			
-			const sheetNames = metadataResponse.data.sheets.map(sheet => sheet.properties.title);
+			if (!metadataResponse.ok) {
+				throw new Error(`Metadata request failed: ${metadataResponse.status} ${metadataResponse.statusText}`);
+			}
+			
+			const metadataData = await metadataResponse.json();
+			const sheetNames = metadataData.sheets.map(sheet => sheet.properties.title);
 			console.log('Available sheets:', sheetNames);
 			
 			if (!sheetNames.includes('LPP')) {
@@ -108,12 +99,20 @@ export async function fetchSheetData() {
 				// Try the first sheet if LPP doesn't exist
 				if (sheetNames.length > 0) {
 					console.log('Trying first available sheet:', sheetNames[0]);
-					const response = await sheets.spreadsheets.values.get({
-						spreadsheetId: env.GOOGLE_SHEETS_ID,
-						range: `${sheetNames[0]}!A:Z`,
+					const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}/values/${encodeURIComponent(sheetNames[0] + '!A:Z')}`;
+					const response = await fetch(dataUrl, {
+						headers: {
+							'Authorization': `Bearer ${accessToken}`,
+							'Content-Type': 'application/json'
+						}
 					});
 					
-					const rows = response.data.values || [];
+					if (!response.ok) {
+						throw new Error(`Data request failed: ${response.status} ${response.statusText}`);
+					}
+					
+					const data = await response.json();
+					const rows = data.values || [];
 					console.log('Successfully fetched data from', sheetNames[0], '- rows:', rows.length);
 					
 					// Cache the data
@@ -128,12 +127,20 @@ export async function fetchSheetData() {
 		}
 		
 		// Fetch the LPP sheet
-		const response = await sheets.spreadsheets.values.get({
-			spreadsheetId: env.GOOGLE_SHEETS_ID,
-			range: 'LPP!A:Z', // Adjust range as needed
+		const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}/values/LPP!A:Z`;
+		const response = await fetch(dataUrl, {
+			headers: {
+				'Authorization': `Bearer ${accessToken}`,
+				'Content-Type': 'application/json'
+			}
 		});
 
-		const rows = response.data.values || [];
+		if (!response.ok) {
+			throw new Error(`Data request failed: ${response.status} ${response.statusText}`);
+		}
+		
+		const data = await response.json();
+		const rows = data.values || [];
 		console.log('Successfully fetched LPP data - rows:', rows.length);
 		
 		// Cache the data
@@ -146,12 +153,11 @@ export async function fetchSheetData() {
 		console.error('Spreadsheet ID being used:', env.GOOGLE_SHEETS_ID);
 		console.error('Error details:', {
 			message: error.message,
-			code: error.code,
 			status: error.status
 		});
 		
 		// Provide helpful error messages
-		if (error.code === 404) {
+		if (error.message.includes('404')) {
 			console.error('404 Error - This usually means:');
 			console.error('1. The spreadsheet ID is incorrect');
 			console.error('2. The service account doesn\'t have access to the spreadsheet');
