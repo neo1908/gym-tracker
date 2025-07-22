@@ -1,6 +1,7 @@
 name = "gym-tracker"
 main = "./.svelte-kit/cloudflare/index.js"
 compatibility_date = "2023-05-18"
+compatibility_flags = ["nodejs_compat"]
 
 [env.production]
 vars = { NODE_ENV = "production" }

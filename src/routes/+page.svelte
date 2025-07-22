@@ -81,7 +81,13 @@
 		</div>
 	{:else}
 		<div class="controls">
-			<div class="controls-header" on:click={toggleExerciseMenu}>
+			<div 
+				class="controls-header" 
+				on:click={toggleExerciseMenu} 
+				on:keydown={(e) => e.key === 'Enter' && toggleExerciseMenu()}
+				role="button"
+				tabindex="0"
+			>
 				<h2>Exercises</h2>
 				<button class="collapse-toggle" class:collapsed={exerciseMenuCollapsed}>
 					{exerciseMenuCollapsed ? '▼' : '▲'}
