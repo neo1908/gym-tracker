@@ -2,8 +2,3 @@ name = "gym-tracker"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
-
-[vars]
-GOOGLE_SHEETS_ID = "1Dm-3Uu46ajXzei3DGmx1ETx_A4M_D5jYpj-kQus5Wmk"
-GOOGLE_SERVICE_ACCOUNT_EMAIL = "bengoestothegym-sa@ben-goes-to-the-gym.iam.gserviceaccount.com"
-CACHE_DURATION = "3600000"

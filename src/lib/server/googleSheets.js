@@ -5,6 +5,13 @@ let cachedData = null;
 let cacheTimestamp = null;
 
 async function getAccessToken() {
+	// Debug: Log what environment variables are available (without exposing values)
+	console.log('Environment variables check:');
+	console.log('- GOOGLE_SERVICE_ACCOUNT_EMAIL present:', !!env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+	console.log('- GOOGLE_PRIVATE_KEY present:', !!env.GOOGLE_PRIVATE_KEY);
+	console.log('- GOOGLE_SHEETS_ID present:', !!env.GOOGLE_SHEETS_ID);
+	console.log('- CACHE_DURATION present:', !!env.CACHE_DURATION);
+	
 	// Validate environment variables at runtime
 	if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
 		throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is required');
@@ -19,10 +26,6 @@ async function getAccessToken() {
 	// Handle the private key - it might be wrapped in quotes and have escaped newlines
 	let privateKey = env.GOOGLE_PRIVATE_KEY;
 	
-	// Log initial key info for debugging (without exposing the actual key)
-	console.log('Private key initial length:', privateKey?.length || 'undefined');
-	console.log('Service account email:', env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
-	
 	// Remove surrounding quotes if present
 	if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
 		privateKey = privateKey.slice(1, -1);
@@ -35,9 +38,6 @@ async function getAccessToken() {
 	if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
 		throw new Error('Invalid private key format. Key should include BEGIN and END markers.');
 	}
-	
-	console.log('Processed private key length:', privateKey.length);
-	console.log('Private key begins with:', privateKey.substring(0, 27));
 	
 	try {
 		// Create JWT client
