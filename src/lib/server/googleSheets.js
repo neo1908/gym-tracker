@@ -1,12 +1,20 @@
 import { google } from 'googleapis';
-import { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SHEETS_ID, CACHE_DURATION } from '$env/static/private';
+import { GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_SHEETS_ID } from '$env/static/private';
 
 // We'll validate these at runtime in the function to avoid module-level errors
 
 let cachedData = null;
 let cacheTimestamp = null;
 
-const CACHE_DURATION_MS = parseInt(CACHE_DURATION) || 3600000; // Default 1 hour
+// Try to get CACHE_DURATION from environment, fallback to default
+let cacheDurationEnv;
+try {
+	cacheDurationEnv = process.env.CACHE_DURATION;
+} catch (e) {
+	// Environment variable access might fail during build
+	cacheDurationEnv = null;
+}
+const CACHE_DURATION_MS = parseInt(cacheDurationEnv) || 3600000; // Default 1 hour
 
 async function getAuthClient() {
 	// Validate environment variables at runtime
