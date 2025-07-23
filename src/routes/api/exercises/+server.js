@@ -36,7 +36,8 @@ export async function GET() {
 			
 			exercises[exerciseName] = {
 				name: exerciseName,
-				sessions: []
+				sessions: [],
+				parseErrors: []
 			};
 			
 			let currentSession = null;
@@ -100,6 +101,14 @@ export async function GET() {
 							console.warn(`Found SD marker but no current session for ${exerciseName} at row ${i}`);
 						}
 					}
+				} else {
+					// Track unparseable data with location info
+					exercises[exerciseName].parseErrors.push({
+						row: i + 1, // Convert to 1-based row numbering (Google Sheets style)
+						column: String.fromCharCode(65 + j), // Convert column index to letter (A, B, C, etc.)
+						location: `${String.fromCharCode(65 + j)}${i + 1}` // e.g., "B4", "C7", etc.
+					});
+					console.log(`  Unparseable data at ${String.fromCharCode(65 + j)}${i + 1}`);
 				}
 			}
 			
