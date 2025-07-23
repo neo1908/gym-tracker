@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import LazyChart from '$lib/LazyChart.svelte';
+	import ExerciseError from '$lib/ExerciseError.svelte';
 	
 	let exercises = {};
 	let loading = true;
@@ -106,7 +107,7 @@
 				
 				<div class="exercise-list">
 					{#each Object.entries(exercises) as [name, exercise]}
-						<label>
+						<label class:has-errors={exercise.parseErrors && exercise.parseErrors.length > 0}>
 							<input 
 								type="checkbox" 
 								checked={selectedExercises.has(name)}
@@ -114,8 +115,17 @@
 							/>
 							<span>
 								<strong>{name}</strong>
-								<small>({exercise.sessions.length} sessions)</small>
+								{#if exercise.parseErrors && exercise.parseErrors.length > 0}
+									<small class="error-info">
+										({exercise.sessions.length} sessions, {exercise.parseErrors.length} parse error{exercise.parseErrors.length > 1 ? 's' : ''})
+									</small>
+								{:else}
+									<small>({exercise.sessions.length} sessions)</small>
+								{/if}
 							</span>
+							{#if exercise.parseErrors && exercise.parseErrors.length > 0}
+								<span class="error-indicator">❌</span>
+							{/if}
 						</label>
 					{/each}
 				</div>
@@ -124,8 +134,12 @@
 		
 		<div class="charts">
 			{#each Object.entries(exercises) as [name, exercise]}
-				{#if selectedExercises.has(name) && exercise.sessions.length > 0}
-					<LazyChart {exercise} />
+				{#if selectedExercises.has(name)}
+					{#if exercise.parseErrors && exercise.parseErrors.length > 0}
+						<ExerciseError {exercise} />
+					{:else if exercise.sessions.length > 0}
+						<LazyChart {exercise} />
+					{/if}
 				{/if}
 			{/each}
 		</div>
@@ -255,6 +269,12 @@
 		font-weight: 500;
 		color: var(--text-secondary);
 		backdrop-filter: blur(10px);
+		position: relative;
+	}
+	
+	.exercise-list label.has-errors {
+		border-color: rgba(239, 68, 68, 0.3);
+		background: rgba(239, 68, 68, 0.05);
 	}
 	
 	.exercise-list label:hover {
@@ -284,6 +304,17 @@
 	
 	.exercise-list input[type="checkbox"]:checked + span strong {
 		color: var(--primary-color);
+	}
+	
+	.error-info {
+		color: #fca5a5 !important;
+		font-weight: 500;
+	}
+	
+	.error-indicator {
+		margin-left: auto;
+		font-size: 1rem;
+		opacity: 0.8;
 	}
 	
 	.charts {
