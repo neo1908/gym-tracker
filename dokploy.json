@@ -1,0 +1,9 @@
+{
+  "name": "gym-tracker",
+  "port": 3000,
+  "buildCommand": "docker build -t gym-tracker .",
+  "runCommand": "docker run -p 5467:3000 gym-tracker",
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

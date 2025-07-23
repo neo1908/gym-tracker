@@ -67,3 +67,25 @@ npm run build
 ```bash
 npm run preview
 ```
+
+## Deployment with Dokploy
+
+This application is configured for deployment with Dokploy. The project includes:
+
+- `Dockerfile` - Multi-stage Docker build for optimal image size
+- `.dockerignore` - Excludes unnecessary files from Docker build
+- `dokploy.json` - Dokploy configuration file
+
+### Deploying to Dokploy
+
+1. Push your code to a Git repository (GitHub, GitLab, etc.)
+2. In Dokploy dashboard, create a new application
+3. Connect your repository
+4. Dokploy will automatically detect the configuration and deploy
+5. Set environment variables in Dokploy dashboard:
+   - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+   - `GOOGLE_PRIVATE_KEY`
+   - `GOOGLE_SHEETS_ID`
+   - `CACHE_DURATION` (optional)
+
+The application will be available on port 3000 by default.
