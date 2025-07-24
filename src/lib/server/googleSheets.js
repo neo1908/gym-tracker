@@ -73,7 +73,7 @@ export async function fetchSheetData() {
 		const accessToken = await getAccessToken();
 		
 		console.log('Attempting to fetch spreadsheet:', env.GOOGLE_SHEETS_ID);
-		console.log('Sheet range: LPP!A:Z');
+		console.log('Sheet range: LPP!A:BX');
 		
 		// First, try to get the spreadsheet metadata to see what sheets exist
 		try {
@@ -99,7 +99,7 @@ export async function fetchSheetData() {
 				// Try the first sheet if LPP doesn't exist
 				if (sheetNames.length > 0) {
 					console.log('Trying first available sheet:', sheetNames[0]);
-					const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}/values/${encodeURIComponent(sheetNames[0] + '!A:Z')}`;
+					const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}/values/${encodeURIComponent(sheetNames[0] + '!A:BX')}`;
 					const response = await fetch(dataUrl, {
 						headers: {
 							'Authorization': `Bearer ${accessToken}`,
@@ -126,8 +126,8 @@ export async function fetchSheetData() {
 			console.error('Error fetching metadata:', metaError.message);
 		}
 		
-		// Fetch the LPP sheet
-		const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}/values/LPP!A:Z`;
+		// Fetch the LPP sheet - extend range to column BX to include all exercises
+		const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${env.GOOGLE_SHEETS_ID}/values/LPP!A:BX`;
 		const response = await fetch(dataUrl, {
 			headers: {
 				'Authorization': `Bearer ${accessToken}`,
@@ -192,8 +192,40 @@ export function parseExerciseData(cellValue) {
 	
 	console.log(`Parsing "${cellValue}" -> cleaned: "${cleanValue}"`);
 	
-	// Match patterns like "10/12" or "10kg/12" or "10lbs/12" or "DB 15/12"
-	const match = cleanValue.match(/(?:DB\s+)?(\d+(?:\.\d+)?)\s*(kg|lbs|lb)?\s*\/\s*(\d+)/i);
+	// First check if this is a time-based format: "1 min", "1.5 min", "30 sec", "1 m", etc.
+	let timeMatch = cleanValue.match(/(\d+(?:\.\d+)?)\s*(min|mins|minute|minutes|m|sec|secs|second|seconds|s)\b/i);
+	
+	if (timeMatch) {
+		const timeValue = parseFloat(timeMatch[1]);
+		const timeUnit = timeMatch[2].toLowerCase();
+		
+		// Convert to seconds for consistency
+		let seconds;
+		if (timeUnit.startsWith('min') || timeUnit === 'm') {
+			seconds = timeValue * 60;
+		} else {
+			seconds = timeValue;
+		}
+		
+		console.log(`Successfully parsed time: ${timeValue} ${timeUnit} = ${seconds} seconds`);
+		
+		return {
+			weight: seconds,  // Store time in seconds as "weight"
+			reps: 1,          // Time-based exercises typically count as 1 rep
+			originalUnit: 'sec',
+			originalWeight: seconds,
+			isTime: true      // Flag to indicate this is a time-based exercise
+		};
+	}
+	
+	// Try to match patterns with "/" separator: "10/12" or "10kg/12" or "10lbs/12" or "DB 15/12"
+	let match = cleanValue.match(/(?:DB\s+)?(\d+(?:\.\d+)?)\s*(kg|lbs|lb)?\s*\/\s*(\d+)/i);
+	
+	// If no match with "/", try "x" format: "Knee 10 x3" or "10 x 3" or "15kg x 5"
+	if (!match) {
+		// This regex captures: optional prefix text, number, optional unit, "x", number
+		match = cleanValue.match(/(?:.*?)(\d+(?:\.\d+)?)\s*(kg|lbs|lb)?\s*x\s*(\d+)/i);
+	}
 	
 	if (match) {
 		const weight = parseFloat(match[1]);
@@ -203,7 +235,7 @@ export function parseExerciseData(cellValue) {
 		// Convert to kg if needed
 		const weightInKg = unit.toLowerCase().includes('lb') ? weight * 0.453592 : weight;
 		
-		console.log(`Successfully parsed: ${weight}${unit}/${reps} reps`);
+		console.log(`Successfully parsed: ${weight}${unit} x ${reps} reps`);
 		
 		return {
 			weight: weightInKg,

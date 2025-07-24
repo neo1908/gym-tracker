@@ -12,21 +12,39 @@ export async function GET() {
 		console.log('Raw sheet data:');
 		console.log('Total rows:', rawData.length);
 		
+		// Debug: Log first few rows to understand structure
+		console.log('First 5 rows of data:');
+		for (let i = 0; i < Math.min(5, rawData.length); i++) {
+			const row = rawData[i];
+			if (row) {
+				console.log(`Row ${i} (Excel row ${i + 1}): ${row.length} columns`);
+				// Show columns A-E for context
+				console.log(`  Columns A-E:`, row.slice(0, 5));
+				// For row 3 (index 2), show more exercise names
+				if (i === 2) {
+					console.log(`  First 10 exercises (B-K):`, row.slice(1, 11));
+					console.log(`  Total non-empty exercises:`, row.filter(cell => cell && cell.trim() !== '').length);
+				}
+			}
+		}
+		
 		// In this sheet format:
-		// Row 2: Exercise names (starting from column 1)
-		// Row 3+: Workout sessions (data for each exercise in corresponding columns)
+		// Row 3 (index 2): Exercise names starting from column B (index 1) to column BX
+		// Row 4+ (index 3+): Workout sessions (data for each exercise in corresponding columns)
 		
 		if (rawData.length < 3) {
 			console.log('Not enough rows in sheet');
 			return json({ exercises: {} });
 		}
 		
-		const exerciseNamesRow = rawData[2]; // Row 2 has exercise names
+		// Exercise names are in row 3 (Excel row 3, 0-indexed as row 2)
+		const exerciseNamesRow = rawData[2]; // Row 3 in Excel (0-indexed as row 2)
 		const exercises = {};
 		
-		console.log('Exercise names row:', exerciseNamesRow);
+		console.log('Exercise names row (index 2/Excel row 3):', exerciseNamesRow);
 		
-		// Process each exercise (column-wise)
+		// Process each exercise (column-wise) - start from column B (index 1)
+		// Column B is index 1, going up to column BX (which would be around index 75)
 		for (let j = 1; j < exerciseNamesRow.length; j++) {
 			const exerciseName = exerciseNamesRow[j];
 			
@@ -43,7 +61,7 @@ export async function GET() {
 			let currentSession = null;
 			let sessionCounter = 0;
 			
-			// Process each workout session (rows 3+)
+			// Process each workout session (starting from row 4 in Excel, which is index 3)
 			for (let i = 3; i < rawData.length; i++) {
 				const row = rawData[i];
 				const cellValue = row[j]; // Get value for this exercise in this session
@@ -102,13 +120,8 @@ export async function GET() {
 						}
 					}
 				} else {
-					// Track unparseable data with location info
-					exercises[exerciseName].parseErrors.push({
-						row: i + 1, // Convert to 1-based row numbering (Google Sheets style)
-						column: String.fromCharCode(65 + j), // Convert column index to letter (A, B, C, etc.)
-						location: `${String.fromCharCode(65 + j)}${i + 1}` // e.g., "B4", "C7", etc.
-					});
-					console.log(`  Unparseable data at ${String.fromCharCode(65 + j)}${i + 1}`);
+					// Just ignore cells without valid weight/rep data
+					console.log(`  Skipping unparseable data at ${String.fromCharCode(65 + j)}${i + 1}`);
 				}
 			}
 			
