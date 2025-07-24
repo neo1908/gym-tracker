@@ -8,7 +8,7 @@ RUN npm ci
 COPY . .
 
 # Install Playwright browsers for testing
-RUN npx playwright install --with-deps chromium
+#RUN npx playwright install --with-deps chromium
 
 # Run tests to ensure build quality
 RUN npm run test
