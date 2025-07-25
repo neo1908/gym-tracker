@@ -7,14 +7,15 @@ RUN npm ci
 
 COPY . .
 
+# Generate SvelteKit files first (creates .svelte-kit/tsconfig.json)
+RUN npm run build
+
 # Install Playwright browsers for testing
 #RUN npx playwright install --with-deps chromium
 
 # Run tests to ensure build quality
 RUN npm run test
 #RUN npm run test:e2e
-
-RUN npm run build
 
 FROM node:20-alpine
 
