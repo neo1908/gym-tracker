@@ -34,3 +34,5 @@ build
 
 # Wrangler/Cloudflare
 wrangler-session-*.json
+test-results
+playwright-report

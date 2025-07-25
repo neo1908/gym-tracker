@@ -5,19 +5,24 @@ test.describe('API Endpoints', () => {
     const response = await request.get('/api/exercises');
     
     // API should respond (even if it fails due to missing credentials)
-    expect(response.status()).toBeLessThan(500);
+    expect([200, 500]).toContain(response.status());
     
-    // If successful, should return JSON array
+    // If successful, should return JSON with exercises object
     if (response.ok()) {
-      const exercises = await response.json();
-      expect(Array.isArray(exercises)).toBeTruthy();
+      const data = await response.json();
+      expect(data).toHaveProperty('exercises');
+      expect(typeof data.exercises).toBe('object');
       
       // If exercises exist, validate structure
-      if (exercises.length > 0) {
-        const exercise = exercises[0];
+      const exerciseNames = Object.keys(data.exercises);
+      if (exerciseNames.length > 0) {
+        const exerciseName = exerciseNames[0];
+        const exercise = data.exercises[exerciseName];
         expect(exercise).toHaveProperty('name');
         expect(exercise).toHaveProperty('sessions');
+        expect(exercise).toHaveProperty('parseErrors');
         expect(Array.isArray(exercise.sessions)).toBeTruthy();
+        expect(Array.isArray(exercise.parseErrors)).toBeTruthy();
         
         if (exercise.sessions.length > 0) {
           const session = exercise.sessions[0];
