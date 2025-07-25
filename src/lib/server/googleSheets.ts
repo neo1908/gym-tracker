@@ -1,10 +1,11 @@
 import { JWT } from 'google-auth-library';
 import { env } from '$env/dynamic/private';
+import type { ParsedExerciseData } from '$lib/types';
 
-let cachedData = null;
-let cacheTimestamp = null;
+let cachedData: any[][] | null = null;
+let cacheTimestamp: number | null = null;
 
-async function getAccessToken() {
+async function getAccessToken(): Promise<string> {
 	// Debug: Log what environment variables are available (without exposing values)
 	console.log('Environment variables check:');
 	console.log('- GOOGLE_SERVICE_ACCOUNT_EMAIL present:', !!env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
@@ -60,7 +61,7 @@ async function getAccessToken() {
 	}
 }
 
-export async function fetchSheetData() {
+export async function fetchSheetData(): Promise<any[][]> {
 	// Get cache duration from environment with fallback
 	const CACHE_DURATION_MS = parseInt(env.CACHE_DURATION) || 3600000; // Default 1 hour
 	
@@ -174,7 +175,7 @@ export async function fetchSheetData() {
 	}
 }
 
-export function parseExerciseData(cellValue) {
+export function parseExerciseData(cellValue: any): ParsedExerciseData | null {
 	if (!cellValue || typeof cellValue !== 'string') {
 		return null;
 	}

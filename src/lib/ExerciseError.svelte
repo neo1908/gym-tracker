@@ -1,17 +1,17 @@
-<script>
-	export let exercise;
+<script lang="ts">
+	import type { Exercise } from '$lib/types';
 	
-	function formatErrorLocations(parseErrors) {
+	export let exercise: Exercise;
+	
+	function formatErrorLocations(parseErrors: string[]): string {
 		if (!parseErrors || parseErrors.length === 0) return '';
 		
-		const locations = parseErrors.map(error => error.location);
-		
-		if (locations.length === 1) {
-			return `cell ${locations[0]}`;
-		} else if (locations.length <= 3) {
-			return `cells ${locations.join(', ')}`;
+		// Since we changed to ignore errors, this should now just be a simple count
+		// But keeping the function for backward compatibility
+		if (parseErrors.length === 1) {
+			return `1 location`;
 		} else {
-			return `${locations.length} cells (${locations.slice(0, 3).join(', ')}, ...)`;
+			return `${parseErrors.length} locations`;
 		}
 	}
 </script>

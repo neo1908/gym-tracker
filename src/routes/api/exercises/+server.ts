@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { fetchSheetData, parseExerciseData } from '$lib/server/googleSheets.js';
+import type { RequestHandler } from './$types';
+import { fetchSheetData, parseExerciseData } from '$lib/server/googleSheets';
+import type { Exercise, ExercisesResponse, ErrorResponse, ExerciseSession } from '$lib/types';
 
-export async function GET() {
+export const GET: RequestHandler = async () => {
 	try {
 		const rawData = await fetchSheetData();
 		
@@ -39,7 +41,7 @@ export async function GET() {
 		
 		// Exercise names are in row 3 (Excel row 3, 0-indexed as row 2)
 		const exerciseNamesRow = rawData[2]; // Row 3 in Excel (0-indexed as row 2)
-		const exercises = {};
+		const exercises: Record<string, Exercise> = {};
 		
 		console.log('Exercise names row (index 2/Excel row 3):', exerciseNamesRow);
 		
@@ -58,7 +60,7 @@ export async function GET() {
 				parseErrors: []
 			};
 			
-			let currentSession = null;
+			let currentSession: ExerciseSession | null = null;
 			let sessionCounter = 0;
 			
 			// Process each workout session (starting from row 4 in Excel, which is index 3)
@@ -136,9 +138,9 @@ export async function GET() {
 		console.log('Final exercises object:', Object.keys(exercises));
 		console.log('Total exercises found:', Object.keys(exercises).length);
 
-		return json({ exercises });
+		return json<ExercisesResponse>({ exercises });
 	} catch (error) {
 		console.error('Error in API endpoint:', error);
-		return json({ error: 'Failed to fetch exercise data' }, { status: 500 });
+		return json<ErrorResponse>({ error: 'Failed to fetch exercise data' }, { status: 500 });
 	}
-}
+};

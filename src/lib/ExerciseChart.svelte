@@ -1,14 +1,15 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
+	import type { Exercise, ChartViewMode } from '$lib/types';
 	
-	export let exercise;
+	export let exercise: Exercise;
 	
-	let canvas;
-	let chart;
-	let chartType = 'volume'; // 'volume', 'total-volume', 'weight', 'reps', 'both'
+	let canvas: HTMLCanvasElement;
+	let chart: Chart | undefined;
+	let chartType: ChartViewMode = 'volume';
 	
-	function createChart() {
+	function createChart(): void {
 		if (chart) {
 			chart.destroy();
 		}
@@ -377,7 +378,7 @@
 		};
 	});
 	
-	function handleChartTypeChange() {
+	function handleChartTypeChange(): void {
 		createChart();
 	}
 </script>

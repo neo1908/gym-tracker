@@ -1,12 +1,13 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import LazyChart from '$lib/LazyChart.svelte';
 	import ExerciseError from '$lib/ExerciseError.svelte';
+	import type { Exercise, ExercisesResponse, ErrorResponse } from '$lib/types';
 	
-	let exercises = {};
+	let exercises: Record<string, Exercise> = {};
 	let loading = true;
-	let error = null;
-	let selectedExercises = new Set();
+	let error: string | null = null;
+	let selectedExercises = new Set<string>();
 	let showAllExercises = true;
 	let exerciseMenuCollapsed = true;
 	
@@ -14,14 +15,14 @@
 		await loadExerciseData();
 	});
 	
-	async function loadExerciseData() {
+	async function loadExerciseData(): Promise<void> {
 		try {
 			loading = true;
 			error = null;
 			const response = await fetch('/api/exercises');
-			const data = await response.json();
+			const data: ExercisesResponse | ErrorResponse = await response.json();
 			
-			if (data.error) {
+			if ('error' in data) {
 				error = data.error;
 			} else {
 				exercises = data.exercises;
@@ -29,13 +30,13 @@
 				selectedExercises = new Set(Object.keys(exercises));
 			}
 		} catch (err) {
-			error = err.message;
+			error = (err as Error).message;
 		} finally {
 			loading = false;
 		}
 	}
 	
-	function toggleExercise(exerciseName) {
+	function toggleExercise(exerciseName: string): void {
 		if (selectedExercises.has(exerciseName)) {
 			selectedExercises.delete(exerciseName);
 		} else {
@@ -44,7 +45,7 @@
 		selectedExercises = selectedExercises;
 	}
 	
-	function toggleAll() {
+	function toggleAll(): void {
 		if (showAllExercises) {
 			selectedExercises = new Set();
 		} else {
@@ -53,7 +54,7 @@
 		showAllExercises = !showAllExercises;
 	}
 	
-	function toggleExerciseMenu() {
+	function toggleExerciseMenu(): void {
 		exerciseMenuCollapsed = !exerciseMenuCollapsed;
 	}
 </script>

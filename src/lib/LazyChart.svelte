@@ -1,13 +1,14 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import ExerciseChart from './ExerciseChart.svelte';
+	import type { Exercise } from '$lib/types';
 	
-	export let exercise;
+	export let exercise: Exercise;
 	
-	let chartContainer;
+	let chartContainer: HTMLDivElement;
 	let isVisible = false;
 	let hasLoaded = false;
-	let observer;
+	let observer: IntersectionObserver | undefined;
 	
 	onMount(() => {
 		// Create intersection observer

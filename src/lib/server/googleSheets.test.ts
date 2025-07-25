@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseExerciseData } from './googleSheets.js';
+import { parseExerciseData } from './googleSheets';
 
 describe('parseExerciseData', () => {
   describe('Weight/Rep formats with "/" separator', () => {

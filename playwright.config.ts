@@ -1,9 +1,9 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, type PlaywrightTestConfig } from '@playwright/test';
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
-export default defineConfig({
+const config: PlaywrightTestConfig = {
   testDir: './tests',
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -68,4 +68,6 @@ export default defineConfig({
     port: 4173,
     reuseExistingServer: !process.env.CI,
   },
-});
+};
+
+export default defineConfig(config);
