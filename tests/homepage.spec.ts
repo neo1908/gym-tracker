@@ -97,7 +97,17 @@ test('chart renders when exercise has data', async ({ page }) => {
   // Exercise name should be in the exercise list
   await expect(page.locator('.exercise-list label')).toContainText('Bench Press');
   
-  // Wait for chart to load - charts are rendered lazily when selected
+  // Exercises are selected by default, so the chart should be rendered
+  // Wait for the lazy loading container to be visible
+  await expect(page.locator('.lazy-chart-container')).toBeVisible({ timeout: 5000 });
+  
+  // Scroll the chart container into view to trigger the IntersectionObserver
+  await page.locator('.lazy-chart-container').scrollIntoViewIfNeeded();
+  
+  // Wait a bit for the lazy loading animation
+  await page.waitForTimeout(500);
+  
+  // Wait for chart to load - charts are rendered lazily when visible
   await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 });
 });
 
@@ -126,5 +136,16 @@ test('handles time-based exercises correctly', async ({ page }) => {
   
   // Should display the time-based exercise in the list
   await expect(page.locator('.exercise-list label')).toContainText('Plank');
+  
+  // Exercises are selected by default, so the chart should be rendered
+  // Wait for the lazy loading container to be visible
+  await expect(page.locator('.lazy-chart-container')).toBeVisible({ timeout: 5000 });
+  
+  // Scroll the chart container into view to trigger the IntersectionObserver
+  await page.locator('.lazy-chart-container').scrollIntoViewIfNeeded();
+  
+  // Wait a bit for the lazy loading animation
+  await page.waitForTimeout(500);
+  
   await expect(page.locator('canvas')).toBeVisible({ timeout: 10000 });
 });

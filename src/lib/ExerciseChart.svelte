@@ -8,6 +8,8 @@
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | undefined;
 	let chartType: ChartViewMode = 'volume';
+	let chartColor: string = '#60a5fa';
+	let yAxisScale: 'linear' | 'logarithmic' = 'linear';
 
 	const sortedSessions = [...exercise.sessions].sort((a, b) => {
 		if (a.sessionNumber && b.sessionNumber) {
@@ -25,6 +27,10 @@
 		const session = sortedSessions[context.dataIndex];
 		const baseLabel = `${context.dataset.label}: ${context.parsed.y}`;
 		const labels = [baseLabel];
+
+		if (session.isPR) {
+			labels.push('🏆 Personal Record!');
+		}
 
 		if (chartType === 'total-volume') {
 			if (session.sets && session.sets.length > 1) {
@@ -72,19 +78,20 @@
 				datasets = [{
 					label: 'Best Set Volume (kg × reps)',
 					data: sortedSessions.map(s => s.weight * s.reps),
-					borderColor: '#60a5fa',
+					borderColor: chartColor,
 					backgroundColor: 'rgba(96, 165, 250, 0.2)',
 					fill: true,
 					tension: 0.1,
 					borderWidth: 3,
-					pointBackgroundColor: '#60a5fa',
+					pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : chartColor),
 					pointBorderColor: '#1e293b',
 					pointBorderWidth: 2,
-					pointRadius: 6,
-					pointHoverRadius: 8
+					pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+					pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
 				}];
 				scales = {
 					y: {
+						type: yAxisScale,
 						title: {
 							display: true,
 							text: 'Best Set Volume (kg × reps)',
@@ -118,19 +125,20 @@
 						}
 						return s.weight * s.reps;
 					}),
-					borderColor: '#f472b6',
+					borderColor: chartColor,
 					backgroundColor: 'rgba(244, 114, 182, 0.2)',
 					fill: true,
 					tension: 0.1,
 					borderWidth: 3,
-					pointBackgroundColor: '#f472b6',
+					pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : chartColor),
 					pointBorderColor: '#1e293b',
 					pointBorderWidth: 2,
-					pointRadius: 6,
-					pointHoverRadius: 8
+					pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+					pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
 				}];
 				scales = {
 					y: {
+						type: yAxisScale,
 						title: {
 							display: true,
 							text: 'Total Session Volume (kg × reps)',
@@ -159,19 +167,20 @@
 				datasets = [{
 					label: 'Weight (kg)',
 					data: sortedSessions.map(s => s.weight),
-					borderColor: '#ef4444',
+					borderColor: chartColor,
 					backgroundColor: 'rgba(239, 68, 68, 0.2)',
 					fill: true,
 					tension: 0.1,
 					borderWidth: 3,
-					pointBackgroundColor: '#ef4444',
+					pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : chartColor),
 					pointBorderColor: '#1e293b',
 					pointBorderWidth: 2,
-					pointRadius: 6,
-					pointHoverRadius: 8
+					pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+					pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
 				}];
 				scales = {
 					y: {
+						type: yAxisScale,
 						title: {
 							display: true,
 							text: 'Weight (kg)',
@@ -200,19 +209,20 @@
 				datasets = [{
 					label: 'Reps',
 					data: sortedSessions.map(s => s.reps),
-					borderColor: '#3b82f6',
+					borderColor: chartColor,
 					backgroundColor: 'rgba(59, 130, 246, 0.2)',
 					fill: true,
 					tension: 0.1,
 					borderWidth: 3,
-					pointBackgroundColor: '#3b82f6',
+					pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : chartColor),
 					pointBorderColor: '#1e293b',
 					pointBorderWidth: 2,
-					pointRadius: 6,
-					pointHoverRadius: 8
+					pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+					pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
 				}];
 				scales = {
 					y: {
+						type: yAxisScale,
 						title: {
 							display: true,
 							text: 'Repetitions',
@@ -242,16 +252,16 @@
 					{
 						label: 'Weight (kg)',
 						data: sortedSessions.map(s => s.weight),
-						borderColor: '#ef4444',
+						borderColor: chartColor,
 						backgroundColor: 'rgba(239, 68, 68, 0.2)',
 						yAxisID: 'y-weight',
 						tension: 0.1,
 						borderWidth: 3,
-						pointBackgroundColor: '#ef4444',
+						pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : chartColor),
 						pointBorderColor: '#1e293b',
 						pointBorderWidth: 2,
-						pointRadius: 6,
-						pointHoverRadius: 8
+						pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+						pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
 					},
 					{
 						label: 'Reps',
@@ -261,16 +271,16 @@
 						yAxisID: 'y-reps',
 						tension: 0.1,
 						borderWidth: 3,
-						pointBackgroundColor: '#3b82f6',
+						pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : '#3b82f6'),
 						pointBorderColor: '#1e293b',
 						pointBorderWidth: 2,
-						pointRadius: 6,
-						pointHoverRadius: 8
+						pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+						pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
 					}
 				];
 				scales = {
 					'y-weight': {
-						type: 'linear',
+						type: yAxisScale,
 						display: true,
 						position: 'left',
 						title: {
@@ -287,7 +297,7 @@
 						}
 					},
 					'y-reps': {
-						type: 'linear',
+						type: yAxisScale,
 						display: true,
 						position: 'right',
 						title: {
@@ -428,6 +438,19 @@
 			<span>📈 Weight + Reps</span>
 		</label>
 	</div>
+	<div class="chart-customization">
+		<label>
+			Chart Color:
+			<input type="color" bind:value={chartColor} on:input={createChart} />
+		</label>
+		<label>
+			Y-Axis Scale:
+			<select bind:value={yAxisScale} on:change={createChart}>
+				<option value="linear">Linear</option>
+				<option value="logarithmic">Logarithmic</option>
+			</select>
+		</label>
+	</div>
 	
 	<div class="chart-container">
 		<canvas bind:this={canvas}></canvas>
@@ -490,6 +513,12 @@
 	.chart-controls input[type="radio"]:checked + span {
 		color: var(--primary-color);
 		font-weight: 600;
+	}
+
+	.chart-customization {
+		display: flex;
+		gap: 1rem;
+		margin-bottom: 1rem;
 	}
 	
 	.chart-container {

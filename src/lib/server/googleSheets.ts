@@ -7,13 +7,13 @@ let cacheTimestamp: number | null = null;
 
 async function getAccessToken(): Promise<string> {
 	if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
-		throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is required');
+		throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable');
 	}
 	if (!env.GOOGLE_PRIVATE_KEY) {
-		throw new Error('GOOGLE_PRIVATE_KEY environment variable is required');
+		throw new Error('Missing GOOGLE_PRIVATE_KEY environment variable');
 	}
 	if (!env.GOOGLE_SHEETS_ID) {
-		throw new Error('GOOGLE_SHEETS_ID environment variable is required');
+		throw new Error('Missing GOOGLE_SHEETS_ID environment variable');
 	}
 
 	const privateKey = env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
@@ -29,8 +29,7 @@ async function getAccessToken(): Promise<string> {
 		
 		return accessToken.token;
 	} catch (error) {
-		console.error('JWT Authentication error:', error.message);
-		throw error;
+		throw new Error('JWT Authentication error: ' + error.message);
 	}
 }
 
@@ -53,7 +52,13 @@ export async function fetchSheetData(): Promise<any[][]> {
 		});
 		
 		if (!metadataResponse.ok) {
-			throw new Error(`Metadata request failed: ${metadataResponse.status} ${metadataResponse.statusText}`);
+			if (metadataResponse.status === 404) {
+				throw new Error('Spreadsheet not found. Please check your GOOGLE_SHEETS_ID.');
+			} else if (metadataResponse.status === 403) {
+				throw new Error('Permission denied. Please share your Google Sheet with the service account email.');
+			} else {
+				throw new Error(`Failed to fetch spreadsheet metadata: ${metadataResponse.status} ${metadataResponse.statusText}`);
+			}
 		}
 		
 		const metadataData = await metadataResponse.json();
@@ -64,7 +69,7 @@ export async function fetchSheetData(): Promise<any[][]> {
 			if (sheetNames.length > 0) {
 				sheetToFetch = sheetNames[0];
 			} else {
-				return [];
+				throw new Error('No sheets found in the spreadsheet.');
 			}
 		}
 		
@@ -77,7 +82,7 @@ export async function fetchSheetData(): Promise<any[][]> {
 		});
 
 		if (!response.ok) {
-			throw new Error(`Data request failed: ${response.status} ${response.statusText}`);
+			throw new Error(`Failed to fetch sheet data: ${response.status} ${response.statusText}`);
 		}
 		
 		const data = await response.json();
@@ -88,8 +93,6 @@ export async function fetchSheetData(): Promise<any[][]> {
 		
 		return rows;
 	} catch (error) {
-		console.error('Error fetching sheet data:', error);
-		
 		if (cachedData) {
 			return cachedData;
 		}
