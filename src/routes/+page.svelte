@@ -1,16 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { exercises, filteredExercises, theme } from '$lib/store';
 	import LazyChart from '$lib/LazyChart.svelte';
 	import ExerciseError from '$lib/ExerciseError.svelte';
+	import WorkoutSummary from '$lib/WorkoutSummary.svelte';
+	import ConsistencyCalendar from '$lib/ConsistencyCalendar.svelte';
 	import type { Exercise, ExercisesResponse, ErrorResponse } from '$lib/types';
 	
-	let exercises: Record<string, Exercise> = {};
 	let loading = true;
 	let error: string | null = null;
 	let selectedExercises = new Set<string>();
 	let showAllExercises = true;
 	let exerciseMenuCollapsed = true;
-	
+	let startDate: string = '';
+	let endDate: string = '';
+	let searchTerm: string = '';
+
 	onMount(async () => {
 		await loadExerciseData();
 	});
@@ -25,9 +30,10 @@
 			if ('error' in data) {
 				error = data.error;
 			} else {
-				exercises = data.exercises;
+				exercises.set(data.exercises);
+				filteredExercises.set(data.exercises);
 				// Select all exercises by default
-				selectedExercises = new Set(Object.keys(exercises));
+				selectedExercises = new Set(Object.keys($exercises));
 			}
 		} catch (err) {
 			error = (err as Error).message;
@@ -49,13 +55,40 @@
 		if (showAllExercises) {
 			selectedExercises = new Set();
 		} else {
-			selectedExercises = new Set(Object.keys(exercises));
+			selectedExercises = new Set(Object.keys($filteredExercises));
 		}
 		showAllExercises = !showAllExercises;
 	}
 	
 	function toggleExerciseMenu(): void {
 		exerciseMenuCollapsed = !exerciseMenuCollapsed;
+	}
+
+	function applyFilters() {
+		let tempExercises = { ...$exercises };
+
+		if (startDate && endDate) {
+			for (const exerciseName in tempExercises) {
+				const exercise = tempExercises[exerciseName];
+				exercise.sessions = exercise.sessions.filter(session => {
+					const sessionDate = new Date(session.date);
+					return sessionDate >= new Date(startDate) && sessionDate <= new Date(endDate);
+				});
+			}
+		}
+
+		if (searchTerm) {
+			const lowerCaseSearchTerm = searchTerm.toLowerCase();
+			const filtered: Record<string, Exercise> = {};
+			for (const exerciseName in tempExercises) {
+				if (exerciseName.toLowerCase().includes(lowerCaseSearchTerm)) {
+					filtered[exerciseName] = tempExercises[exerciseName];
+				}
+			}
+			tempExercises = filtered;
+		}
+
+		filteredExercises.set(tempExercises);
 	}
 </script>
 
@@ -67,21 +100,25 @@
 	<h1>Gym Progress Tracker</h1>
 	
 	{#if loading}
-		<div class="loading">
+		<div class="loading" role="status" aria-live="polite">
 			<p>Loading your workout data...</p>
 		</div>
 	{:else if error}
-		<div class="error">
+		<div class="error" role="alert" aria-live="assertive">
 			<p><strong>Error:</strong> {error}</p>
 			<p>Make sure your Google Sheet is shared with the service account email.</p>
 			<button on:click={loadExerciseData}>Retry</button>
 		</div>
-	{:else if Object.keys(exercises).length === 0}
-		<div class="empty-state">
+	{:else if Object.keys($exercises).length === 0}
+		<div class="empty-state" role="status" aria-live="polite">
 			<p>No exercise data found in the "LPP" sheet.</p>
 			<button on:click={loadExerciseData}>Reload Data</button>
 		</div>
 	{:else}
+		<div class="dashboard">
+			<WorkoutSummary exercises={$exercises} />
+			<ConsistencyCalendar exercises={$exercises} />
+		</div>
 		<div class="controls">
 			<div 
 				class="controls-header" 
@@ -89,15 +126,21 @@
 				on:keydown={(e) => e.key === 'Enter' && toggleExerciseMenu()}
 				role="button"
 				tabindex="0"
+				aria-expanded={!exerciseMenuCollapsed}
+				aria-controls="exercise-controls"
 			>
 				<h2>Exercises</h2>
-				<button class="collapse-toggle" class:collapsed={exerciseMenuCollapsed}>
+				<button class="collapse-toggle" class:collapsed={exerciseMenuCollapsed} aria-label="Toggle exercise menu">
 					{exerciseMenuCollapsed ? '▼' : '▲'}
 				</button>
 			</div>
 			
 			{#if !exerciseMenuCollapsed}
-				<div class="control-buttons">
+				<div id="exercise-controls" class="control-buttons">
+					<input type="text" placeholder="Search exercises..." bind:value={searchTerm} on:input={applyFilters} aria-label="Search exercises" />
+					<input type="date" bind:value={startDate} aria-label="Start date" />
+					<input type="date" bind:value={endDate} aria-label="End date" />
+					<button on:click={applyFilters}>Filter</button>
 					<button on:click={toggleAll}>
 						{showAllExercises ? 'Deselect All' : 'Select All'}
 					</button>
@@ -107,7 +150,7 @@
 				</div>
 				
 				<div class="exercise-list">
-					{#each Object.entries(exercises) as [name, exercise]}
+					{#each Object.entries($filteredExercises) as [name, exercise]}
 						<label class:has-errors={exercise.parseErrors && exercise.parseErrors.length > 0}>
 							<input 
 								type="checkbox" 
@@ -134,7 +177,7 @@
 		</div>
 		
 		<div class="charts">
-			{#each Object.entries(exercises) as [name, exercise]}
+			{#each Object.entries($filteredExercises) as [name, exercise]}
 				{#if selectedExercises.has(name)}
 					{#if exercise.parseErrors && exercise.parseErrors.length > 0}
 						<ExerciseError {exercise} />
@@ -160,6 +203,13 @@
 		margin-bottom: 3rem;
 		font-size: 3rem;
 		font-weight: 800;
+	}
+
+	.dashboard {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2rem;
+		margin-bottom: 2rem;
 	}
 	
 	.error {
@@ -361,6 +411,10 @@
 			margin-bottom: 2rem;
 		}
 		
+		.dashboard {
+			grid-template-columns: 1fr;
+		}
+
 		.controls {
 			padding: 1.5rem;
 			margin-bottom: 2rem;

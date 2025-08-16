@@ -8,6 +8,7 @@ export interface ExerciseSession {
   originalWeight: number;
   originalUnit: string;
   isTime?: boolean;
+  isPR?: boolean;
   sets: ExerciseSet[];
 }
 

@@ -96,9 +96,27 @@ export const GET: RequestHandler = async () => {
 			}
 		}
 
+		// Identify personal records
+		for (const exerciseName in exercises) {
+			const exercise = exercises[exerciseName];
+			let maxVolume = 0;
+			for (const session of exercise.sessions) {
+				const volume = session.weight * session.reps;
+				if (volume > maxVolume) {
+					maxVolume = volume;
+				}
+			}
+
+			for (const session of exercise.sessions) {
+				const volume = session.weight * session.reps;
+				if (volume === maxVolume) {
+					session.isPR = true;
+				}
+			}
+		}
+
 		return json<ExercisesResponse>({ exercises });
 	} catch (error) {
-		console.error('Error in API endpoint:', error);
-		return json<ErrorResponse>({ error: 'Failed to fetch exercise data' }, { status: 500 });
+		return json<ErrorResponse>({ error: error.message }, { status: 500 });
 	}
 };

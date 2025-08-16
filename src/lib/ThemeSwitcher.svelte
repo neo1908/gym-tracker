@@ -1,27 +1,26 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-
-  let theme: 'light' | 'dark' = 'dark';
+  import { theme } from '$lib/store';
 
   onMount(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (savedTheme) {
-      theme = savedTheme;
+      $theme = savedTheme;
     } else {
-      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      $theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', $theme);
   });
 
   function toggleTheme() {
-    theme = theme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    $theme = $theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', $theme);
+    document.documentElement.setAttribute('data-theme', $theme);
   }
 </script>
 
 <button on:click={toggleTheme} class="theme-switcher">
-  {theme === 'light' ? '🌙' : '☀️'}
+  {$theme === 'light' ? '🌙' : '☀️'}
 </button>
 
 <style>
