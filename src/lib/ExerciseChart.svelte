@@ -1,13 +1,57 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
-	import type { Exercise, ChartViewMode } from '$lib/types';
+	import type { Exercise, ChartViewMode, ExerciseSession } from '$lib/types';
 	
 	export let exercise: Exercise;
 	
 	let canvas: HTMLCanvasElement;
 	let chart: Chart | undefined;
 	let chartType: ChartViewMode = 'volume';
+
+	const sortedSessions = [...exercise.sessions].sort((a, b) => {
+		if (a.sessionNumber && b.sessionNumber) {
+			return a.sessionNumber - b.sessionNumber;
+		}
+		return new Date(a.date) - new Date(b.date);
+	});
+
+	function getTooltipTitle(context: any[]): string {
+		const session = sortedSessions[context[0].dataIndex];
+		return session.date || `Session ${session.sessionNumber || context[0].dataIndex + 1}`;
+	}
+
+	function getTooltipLabel(context: any): string[] {
+		const session = sortedSessions[context.dataIndex];
+		const baseLabel = `${context.dataset.label}: ${context.parsed.y}`;
+		const labels = [baseLabel];
+
+		if (chartType === 'total-volume') {
+			if (session.sets && session.sets.length > 1) {
+				labels.push(`Sets: ${session.sets.length}`);
+				labels.push('');
+				session.sets.forEach((set) => {
+					const volume = (set.weight * set.reps).toFixed(1);
+					labels.push(`  Set ${set.setNumber}: ${set.originalWeight}${set.originalUnit} × ${set.reps} = ${volume} vol`);
+				});
+			} else {
+				labels.push(`Best Set: ${session.originalWeight}${session.originalUnit} × ${session.reps} reps`);
+			}
+		} else {
+			labels.push(`Best Set: ${session.originalWeight}${session.originalUnit} × ${session.reps} reps`);
+			labels.push(`Volume: ${(session.weight * session.reps).toFixed(1)} kg×reps`);
+
+			if (session.sets && session.sets.length > 1) {
+				labels.push('');
+				labels.push(`All Sets (${session.sets.length} total):`);
+				session.sets.forEach((set) => {
+					labels.push(`  Set ${set.setNumber}: ${set.originalWeight}${set.originalUnit} × ${set.reps} reps`);
+				});
+			}
+		}
+
+		return labels;
+	}
 	
 	function createChart(): void {
 		if (chart) {
@@ -15,14 +59,6 @@
 		}
 		
 		const ctx = canvas.getContext('2d');
-		
-		// Sort sessions by session number or date
-		const sortedSessions = [...exercise.sessions].sort((a, b) => {
-			if (a.sessionNumber && b.sessionNumber) {
-				return a.sessionNumber - b.sessionNumber;
-			}
-			return new Date(a.date) - new Date(b.date);
-		});
 		
 		const labels = sortedSessions.map((s, index) => 
 			s.sessionNumber ? `Session ${s.sessionNumber}` : s.date || `Workout ${index + 1}`
@@ -33,7 +69,6 @@
 		
 		switch (chartType) {
 			case 'volume':
-				// Best set volume (weight × reps)
 				datasets = [{
 					label: 'Best Set Volume (kg × reps)',
 					data: sortedSessions.map(s => s.weight * s.reps),
@@ -75,7 +110,6 @@
 				break;
 				
 			case 'total-volume':
-				// Total session volume (sum of all sets)
 				datasets = [{
 					label: 'Total Session Volume (kg × reps)',
 					data: sortedSessions.map(s => {
@@ -311,45 +345,8 @@
 						titleColor: '#f8fafc',
 						bodyColor: '#cbd5e1',
 						callbacks: {
-							title: function(context) {
-								const session = sortedSessions[context[0].dataIndex];
-								return session.date || `Session ${session.sessionNumber || context[0].dataIndex + 1}`;
-							},
-							label: function(context) {
-								const session = sortedSessions[context.dataIndex];
-								const baseLabel = context.dataset.label + ': ' + context.parsed.y;
-								
-								const labels = [baseLabel];
-								
-								// Show different info based on chart type
-								if (chartType === 'total-volume') {
-									if (session.sets && session.sets.length > 1) {
-										labels.push(`Sets: ${session.sets.length}`);
-										labels.push(''); // Empty line
-										session.sets.forEach((set, index) => {
-											const volume = (set.weight * set.reps).toFixed(1);
-											labels.push(`  Set ${set.setNumber}: ${set.originalWeight}${set.originalUnit} × ${set.reps} = ${volume} vol`);
-										});
-									} else {
-										labels.push(`Best Set: ${session.originalWeight}${session.originalUnit} × ${session.reps} reps`);
-									}
-								} else {
-									// Show best set info for other chart types
-									labels.push(`Best Set: ${session.originalWeight}${session.originalUnit} × ${session.reps} reps`);
-									labels.push(`Volume: ${(session.weight * session.reps).toFixed(1)} kg×reps`);
-									
-									// If there are multiple sets, show all sets
-									if (session.sets && session.sets.length > 1) {
-										labels.push(''); // Empty line
-										labels.push(`All Sets (${session.sets.length} total):`);
-										session.sets.forEach((set, index) => {
-											labels.push(`  Set ${set.setNumber}: ${set.originalWeight}${set.originalUnit} × ${set.reps} reps`);
-										});
-									}
-								}
-								
-								return labels;
-							}
+							title: getTooltipTitle,
+							label: getTooltipLabel
 						}
 					},
 					legend: {
