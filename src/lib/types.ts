@@ -9,6 +9,7 @@ export interface ExerciseSession {
   originalUnit: string;
   isTime?: boolean;
   isPR?: boolean;
+  estimated1RM?: number;
   sets: ExerciseSet[];
 }
 
@@ -56,7 +57,7 @@ export interface ChartData {
   }[];
 }
 
-export type ChartViewMode = 'volume' | 'totalVolume' | 'weight' | 'reps' | 'both';
+export type ChartViewMode = 'volume' | 'totalVolume' | 'weight' | 'reps' | 'both' | 'estimated1RM';
 
 export interface ChartOptions {
   responsive: boolean;

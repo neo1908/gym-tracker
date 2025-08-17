@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { exercises, filteredExercises, theme } from '$lib/store';
 	import LazyChart from '$lib/LazyChart.svelte';
 	import ExerciseError from '$lib/ExerciseError.svelte';
@@ -17,6 +19,10 @@
 	let searchTerm: string = '';
 
 	onMount(async () => {
+		if ($page.data.user) {
+			goto('/sessions');
+			return;
+		}
 		await loadExerciseData();
 	});
 	
@@ -97,6 +103,21 @@
 </svelte:head>
 
 <main>
+	{#if !$page.data.user}
+		<div class="welcome-container">
+			<h1>Welcome to Gym Tracker</h1>
+			<p class="welcome-subtitle">Track your gym sessions and monitor your progress</p>
+			<div class="welcome-actions">
+				<a href="/login" class="btn btn-primary">Login</a>
+				<a href="/signup" class="btn btn-secondary">Sign Up</a>
+			</div>
+			<div class="demo-section">
+				<h2>Demo View - Exercise Progress Charts</h2>
+				<p>Below is a demo of the exercise tracking charts from spreadsheet data:</p>
+			</div>
+		</div>
+	{/if}
+	
 	<h1>Gym Progress Tracker</h1>
 	
 	{#if loading}
@@ -398,6 +419,84 @@
 		font-size: 3rem;
 		display: block;
 		margin-bottom: 1rem;
+	}
+	
+	.welcome-container {
+		text-align: center;
+		padding: 4rem 2rem;
+		margin-bottom: 3rem;
+		background: var(--background-card);
+		border-radius: var(--border-radius);
+		box-shadow: var(--shadow-lg), var(--shadow-glow);
+		border: 1px solid var(--border-light);
+		backdrop-filter: blur(20px);
+	}
+	
+	.welcome-container h1 {
+		font-size: 3rem;
+		margin-bottom: 1rem;
+		background: linear-gradient(135deg, var(--primary-color), #10b981);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+	}
+	
+	.welcome-subtitle {
+		font-size: 1.25rem;
+		color: var(--text-secondary);
+		margin-bottom: 2rem;
+	}
+	
+	.welcome-actions {
+		display: flex;
+		gap: 1rem;
+		justify-content: center;
+		margin-bottom: 3rem;
+	}
+	
+	.btn {
+		padding: 0.75rem 2rem;
+		border-radius: var(--border-radius-sm);
+		text-decoration: none;
+		font-weight: 600;
+		transition: all 0.3s ease;
+		display: inline-block;
+	}
+	
+	.btn-primary {
+		background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+		color: white;
+	}
+	
+	.btn-primary:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-lg);
+	}
+	
+	.btn-secondary {
+		background: var(--background-elevated);
+		color: var(--text-primary);
+		border: 2px solid var(--border-light);
+	}
+	
+	.btn-secondary:hover {
+		background: var(--background-input);
+		border-color: var(--primary-color);
+	}
+	
+	.demo-section {
+		margin-top: 3rem;
+		padding-top: 2rem;
+		border-top: 1px solid var(--border-light);
+	}
+	
+	.demo-section h2 {
+		font-size: 1.5rem;
+		margin-bottom: 1rem;
+		color: var(--text-primary);
+	}
+	
+	.demo-section p {
+		color: var(--text-secondary);
 	}
 	
 	/* Responsive design */

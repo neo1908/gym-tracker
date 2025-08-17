@@ -74,6 +74,47 @@
 		let scales = {};
 		
 		switch (chartType) {
+			case 'estimated1RM':
+				datasets = [{
+					label: 'Estimated 1RM (kg)',
+					data: sortedSessions.map(s => s.estimated1RM),
+					borderColor: chartColor,
+					backgroundColor: 'rgba(96, 165, 250, 0.2)',
+					fill: true,
+					tension: 0.1,
+					borderWidth: 3,
+					pointBackgroundColor: sortedSessions.map(s => s.isPR ? '#f472b6' : chartColor),
+					pointBorderColor: '#1e293b',
+					pointBorderWidth: 2,
+					pointRadius: sortedSessions.map(s => s.isPR ? 8 : 6),
+					pointHoverRadius: sortedSessions.map(s => s.isPR ? 10 : 8)
+				}];
+				scales = {
+					y: {
+						type: yAxisScale,
+						title: {
+							display: true,
+							text: 'Estimated 1RM (kg)',
+							color: '#cbd5e1'
+						},
+						beginAtZero: true,
+						grid: {
+							color: 'rgba(203, 213, 225, 0.1)'
+						},
+						ticks: {
+							color: '#94a3b8'
+						}
+					},
+					x: {
+						grid: {
+							color: 'rgba(203, 213, 225, 0.1)'
+						},
+						ticks: {
+							color: '#94a3b8'
+						}
+					}
+				};
+				break;
 			case 'volume':
 				datasets = [{
 					label: 'Best Set Volume (kg × reps)',
@@ -392,6 +433,15 @@
 
 <div class="chart-wrapper">
 	<div class="chart-controls">
+		<label>
+			<input 
+				type="radio" 
+				bind:group={chartType} 
+				value="estimated1RM"
+				on:change={handleChartTypeChange}
+			/>
+			<span>🚀 Estimated 1RM</span>
+		</label>
 		<label>
 			<input 
 				type="radio" 
