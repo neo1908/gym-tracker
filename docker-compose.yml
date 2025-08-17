@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gymtracker
+      POSTGRES_PASSWORD: gymtracker_password
+      POSTGRES_DB: gym_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymtracker -d gym_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://gymtracker:gymtracker_password@postgres:5432/gym_tracker
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-your-secret-key-at-least-32-characters-change-in-production}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      ALLOW_SIGNUPS: ${ALLOW_SIGNUPS:-false}
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: ${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY}
+      GOOGLE_SHEETS_ID: ${GOOGLE_SHEETS_ID}
+      CACHE_DURATION: ${CACHE_DURATION:-3600000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

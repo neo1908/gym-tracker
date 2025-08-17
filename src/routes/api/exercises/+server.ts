@@ -3,6 +3,9 @@ import type { RequestHandler } from './$types';
 import { fetchSheetData, parseExerciseData } from '$lib/server/googleSheets';
 import type { Exercise, ExercisesResponse, ErrorResponse, ExerciseSession } from '$lib/types';
 
+// Epley formula for estimated 1RM
+const epley = (weight: number, reps: number) => weight * (1 + reps / 30);
+
 export const GET: RequestHandler = async () => {
 	try {
 		const rawData = await fetchSheetData();
@@ -63,7 +66,8 @@ export const GET: RequestHandler = async () => {
 							weight: parsedData.weight,
 							reps: parsedData.reps,
 							originalWeight: parsedData.originalWeight,
-							originalUnit: parsedData.originalUnit
+							originalUnit: parsedData.originalUnit,
+							estimated1RM: epley(parsedData.weight, parsedData.reps)
 						};
 						
 						currentSession.sets.push({
@@ -81,14 +85,15 @@ export const GET: RequestHandler = async () => {
 							});
 							
 							// Update session totals with best set (highest weight * reps volume)
-							const currentVolume = currentSession.weight * currentSession.reps;
-							const newVolume = parsedData.weight * parsedData.reps;
+							const currentEstimated1RM = currentSession.estimated1RM;
+							const newEstimated1RM = epley(parsedData.weight, parsedData.reps);
 							
-							if (newVolume > currentVolume) {
+							if (newEstimated1RM > currentEstimated1RM) {
 								currentSession.weight = parsedData.weight;
 								currentSession.reps = parsedData.reps;
 								currentSession.originalWeight = parsedData.originalWeight;
 								currentSession.originalUnit = parsedData.originalUnit;
+								currentSession.estimated1RM = newEstimated1RM;
 							}
 						}
 					}
@@ -96,20 +101,18 @@ export const GET: RequestHandler = async () => {
 			}
 		}
 
-		// Identify personal records
+		// Identify personal records based on estimated 1RM
 		for (const exerciseName in exercises) {
 			const exercise = exercises[exerciseName];
-			let maxVolume = 0;
+			let max1RM = 0;
 			for (const session of exercise.sessions) {
-				const volume = session.weight * session.reps;
-				if (volume > maxVolume) {
-					maxVolume = volume;
+				if (session.estimated1RM > max1RM) {
+					max1RM = session.estimated1RM;
 				}
 			}
 
 			for (const session of exercise.sessions) {
-				const volume = session.weight * session.reps;
-				if (volume === maxVolume) {
+				if (session.estimated1RM === max1RM) {
 					session.isPR = true;
 				}
 			}

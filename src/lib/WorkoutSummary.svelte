@@ -4,7 +4,7 @@
   export let exercises: Record<string, Exercise>;
 
   function getLastWorkout() {
-    let lastWorkout: { exercise: string; sets: number; reps: number; volume: number; }[] = [];
+    let lastWorkout: { exercise: string; sets: number; reps: number; volume: number; estimated1RM: number; }[] = [];
     let lastSessionNumber = 0;
 
     for (const exerciseName in exercises) {
@@ -21,6 +21,7 @@
             sets: lastSession.sets.length,
             reps: lastSession.reps,
             volume: lastSession.weight * lastSession.reps,
+            estimated1RM: lastSession.estimated1RM,
           });
         }
       }
@@ -42,6 +43,7 @@
           <th>Sets</th>
           <th>Reps</th>
           <th>Volume</th>
+          <th>Est. 1RM</th>
         </tr>
       </thead>
       <tbody>
@@ -51,6 +53,7 @@
             <td>{workout.sets}</td>
             <td>{workout.reps}</td>
             <td>{workout.volume.toFixed(1)}</td>
+            <td>{workout.estimated1RM.toFixed(1)}</td>
           </tr>
         {/each}
       </tbody>
