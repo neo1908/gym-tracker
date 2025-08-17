@@ -38,7 +38,7 @@ function getAuth() {
         },
         advanced: {
           disableCSRFCheck: false,
-          generateId: false,
+          generateId: true,
           useSecureCookies: process.env.NODE_ENV === 'production',
           cookiePrefix: 'gym-tracker'
         },
