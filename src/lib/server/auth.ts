@@ -9,15 +9,11 @@ function getAuth() {
   if (!_auth) {
     try {
       const db = getDb();
+      console.log('Initializing better-auth with database adapter...');
+      
       _auth = betterAuth({
         database: drizzleAdapter(db, {
-          provider: 'pg',
-          schema: {
-            user: schema.user,
-            account: schema.account,
-            session: schema.session,
-            verification: schema.verification
-          }
+          provider: 'pg'
         }),
         emailAndPassword: {
           enabled: true,

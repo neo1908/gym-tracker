@@ -10,11 +10,19 @@ export function getDb(): PostgresJsDatabase<typeof schema> {
     const connectionString = process.env.DATABASE_URL;
     
     if (!connectionString) {
+      console.error('DATABASE_URL environment variable is not set');
       throw new Error('DATABASE_URL environment variable is not set');
     }
     
-    const queryClient = postgres(connectionString);
-    _db = drizzle(queryClient, { schema });
+    console.log('Connecting to database...');
+    try {
+      const queryClient = postgres(connectionString);
+      _db = drizzle(queryClient, { schema });
+      console.log('Database connection established successfully');
+    } catch (error) {
+      console.error('Failed to connect to database:', error);
+      throw error;
+    }
   }
   
   return _db;
