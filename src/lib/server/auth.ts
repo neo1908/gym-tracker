@@ -13,7 +13,8 @@ function getAuth() {
       
       _auth = betterAuth({
         database: drizzleAdapter(db, {
-          provider: 'pg'
+          provider: 'pg',
+          generateId: true
         }),
         emailAndPassword: {
           enabled: true,
@@ -36,9 +37,6 @@ function getAuth() {
           disableCSRFCheck: false,
           useSecureCookies: process.env.NODE_ENV === 'production',
           cookiePrefix: 'gym-tracker'
-        },
-        database: {
-          generateId: true
         },
         trustedOrigins: [process.env.BETTER_AUTH_URL || 'http://localhost:5173']
       });
