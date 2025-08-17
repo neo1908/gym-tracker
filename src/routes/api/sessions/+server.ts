@@ -19,6 +19,9 @@ export const GET: RequestHandler = async ({ locals }) => {
     return json(sessions);
   } catch (error) {
     console.error('Failed to fetch sessions:', error);
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      return json({ error: 'Database connection not configured' }, { status: 503 });
+    }
     return json({ error: 'Failed to fetch sessions' }, { status: 500 });
   }
 };
@@ -65,6 +68,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     return json(session);
   } catch (error) {
     console.error('Failed to create session:', error);
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      return json({ error: 'Database connection not configured' }, { status: 503 });
+    }
     return json({ error: 'Failed to create session' }, { status: 500 });
   }
 };

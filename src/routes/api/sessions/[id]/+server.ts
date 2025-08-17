@@ -35,6 +35,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
     return json({ ...session, exercises });
   } catch (error) {
     console.error('Failed to fetch session:', error);
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      return json({ error: 'Database connection not configured' }, { status: 503 });
+    }
     return json({ error: 'Failed to fetch session' }, { status: 500 });
   }
 };
@@ -95,6 +98,9 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
     return json(updatedSession);
   } catch (error) {
     console.error('Failed to update session:', error);
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      return json({ error: 'Database connection not configured' }, { status: 503 });
+    }
     return json({ error: 'Failed to update session' }, { status: 500 });
   }
 };
@@ -126,6 +132,9 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
     return json({ success: true });
   } catch (error) {
     console.error('Failed to delete session:', error);
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
+      return json({ error: 'Database connection not configured' }, { status: 503 });
+    }
     return json({ error: 'Failed to delete session' }, { status: 500 });
   }
 };
