@@ -1,17 +1,22 @@
 <script lang="ts">
-  import { session, signOut } from '$lib/auth-client';
+  import { signOut } from '$lib/auth-client';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { browser } from '$app/environment';
   
   async function handleSignOut() {
     await signOut();
     goto('/login');
   }
+  
+  // Use server-side session data from page data
+  $: session = $page.data.session;
 </script>
 
 <div class="auth-status">
-  {#if $session}
+  {#if session && session.user}
     <div class="user-info">
-      <span class="user-email">{$session.user.email}</span>
+      <span class="user-email">{session.user.email}</span>
       <button on:click={handleSignOut} class="logout-button">
         Logout
       </button>
