@@ -45,7 +45,7 @@
     "dotenv": "^17.2.0",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.4",
-    "google-auth-library": "^10.1.0",
+    "google-auth-library": "^10.2.1",
     "postgres": "^3.4.7",
     "xlsx": "^0.18.5"
   }
