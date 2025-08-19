@@ -6,25 +6,54 @@ test('homepage displays correctly', async ({ page }) => {
   // Check that the page loads
   await expect(page).toHaveTitle(/Gym Tracker/i);
   
-  // Check for main heading
-  await expect(page.locator('h1')).toHaveText('Gym Progress Tracker');
+  // Check for main heading - should be in main content, not header
+  await expect(page.locator('main h1')).toContainText('Gym Progress Tracker');
 });
 
-test('exercises are displayed when sheet data is available', async ({ page }) => {
-  // Mock the API response to simulate successful data fetch
-  await page.route('/api/exercises', async route => {
-    const json = {
-      exercises: {
-        'Test Exercise': {
-          name: 'Test Exercise',
-          sessions: [
-            { date: 'Session 1', weight: 10, reps: 8 },
-            { date: 'Session 2', weight: 12, reps: 8 }
-          ],
-          parseErrors: []
-        }
+test('displays login link in header when not authenticated', async ({ page }) => {
+  await page.goto('/');
+  
+  // Check for login link in header
+  await expect(page.locator('.auth-links a[href="/login"]')).toBeVisible();
+});
+
+test('exercises are displayed when session data is available', async ({ page }) => {
+  // Mock the sessions API response to simulate data from database
+  await page.route('/api/sessions?includeExercises=true', async route => {
+    const json = [
+      {
+        id: 'session-1',
+        date: '2024-01-01T00:00:00Z',
+        userId: 'user-1',
+        notes: 'Test session',
+        exercises: [
+          {
+            id: 'exercise-1',
+            exerciseName: 'Test Exercise',
+            sets: 3,
+            reps: 8,
+            weight: '10',
+            unit: 'kg'
+          }
+        ]
+      },
+      {
+        id: 'session-2',
+        date: '2024-01-02T00:00:00Z',
+        userId: 'user-1',
+        notes: 'Another session',
+        exercises: [
+          {
+            id: 'exercise-2',
+            exerciseName: 'Test Exercise',
+            sets: 3,
+            reps: 8,
+            weight: '12',
+            unit: 'kg'
+          }
+        ]
       }
-    };
+    ];
     await route.fulfill({ json });
   });
 
@@ -42,11 +71,11 @@ test('exercises are displayed when sheet data is available', async ({ page }) =>
 
 test('handles API errors gracefully', async ({ page }) => {
   // Mock API error response
-  await page.route('/api/exercises', async route => {
+  await page.route('/api/sessions?includeExercises=true', async route => {
     await route.fulfill({
       status: 500,
       contentType: 'application/json',
-      body: JSON.stringify({ error: 'Failed to fetch exercise data' })
+      body: JSON.stringify({ error: 'Failed to fetch sessions' })
     });
   });
 
@@ -54,13 +83,13 @@ test('handles API errors gracefully', async ({ page }) => {
   
   // Should display error message instead of crashing
   await expect(page.locator('.error')).toBeVisible();
-  await expect(page.locator('.error')).toContainText('Failed to fetch exercise data');
+  await expect(page.locator('.error')).toContainText('Failed to load exercise data');
 });
 
 test('displays message when no exercises are found', async ({ page }) => {
-  // Mock empty response
-  await page.route('/api/exercises', async route => {
-    await route.fulfill({ json: { exercises: {} } });
+  // Mock empty response (no sessions)
+  await page.route('/api/sessions?includeExercises=true', async route => {
+    await route.fulfill({ json: [] });
   });
 
   await page.goto('/');
@@ -70,22 +99,68 @@ test('displays message when no exercises are found', async ({ page }) => {
   await expect(page.locator('.empty-state')).toContainText('No exercise data found');
 });
 
+test('shows message for unauthenticated users in empty state', async ({ page }) => {
+  // Mock empty sessions response
+  await page.route('/api/sessions?includeExercises=true', async route => {
+    await route.fulfill({ json: [] });
+  });
+
+  await page.goto('/');
+  
+  // Wait for empty state
+  await expect(page.locator('.empty-state')).toBeVisible();
+  
+  // Should show login message for unauthenticated users
+  await expect(page.locator('.empty-state')).toContainText('Please log in to view exercise data');
+});
+
 test('chart renders when exercise has data', async ({ page }) => {
-  // Mock exercise with data
-  await page.route('/api/exercises', async route => {
-    const json = {
-      exercises: {
-        'Bench Press': {
-          name: 'Bench Press',
-          sessions: [
-            { date: 'Session 1', weight: 80, reps: 8 },
-            { date: 'Session 2', weight: 85, reps: 8 },
-            { date: 'Session 3', weight: 90, reps: 6 }
-          ],
-          parseErrors: []
-        }
+  // Mock sessions with exercise data
+  await page.route('/api/sessions?includeExercises=true', async route => {
+    const json = [
+      {
+        id: 'session-1',
+        date: '2024-01-01T00:00:00Z',
+        userId: 'user-1',
+        exercises: [
+          {
+            exerciseName: 'Bench Press',
+            sets: 3,
+            reps: 8,
+            weight: '80',
+            unit: 'kg'
+          }
+        ]
+      },
+      {
+        id: 'session-2',
+        date: '2024-01-02T00:00:00Z',
+        userId: 'user-1',
+        exercises: [
+          {
+            exerciseName: 'Bench Press',
+            sets: 3,
+            reps: 8,
+            weight: '85',
+            unit: 'kg'
+          }
+        ]
+      },
+      {
+        id: 'session-3',
+        date: '2024-01-03T00:00:00Z',
+        userId: 'user-1',
+        exercises: [
+          {
+            exerciseName: 'Bench Press',
+            sets: 3,
+            reps: 6,
+            weight: '90',
+            unit: 'kg'
+          }
+        ]
       }
-    };
+    ];
     await route.fulfill({ json });
   });
 
@@ -112,20 +187,38 @@ test('chart renders when exercise has data', async ({ page }) => {
 });
 
 test('handles time-based exercises correctly', async ({ page }) => {
-  // Mock time-based exercise
-  await page.route('/api/exercises', async route => {
-    const json = {
-      exercises: {
-        'Plank': {
-          name: 'Plank',
-          sessions: [
-            { date: 'Session 1', weight: 60, reps: 1, isTime: true },
-            { date: 'Session 2', weight: 90, reps: 1, isTime: true }
-          ],
-          parseErrors: []
-        }
+  // Mock time-based exercise data from sessions
+  await page.route('/api/sessions?includeExercises=true', async route => {
+    const json = [
+      {
+        id: 'session-1',
+        date: '2024-01-01T00:00:00Z',
+        userId: 'user-1',
+        exercises: [
+          {
+            exerciseName: 'Plank',
+            sets: 1,
+            reps: 1,
+            weight: '60',
+            unit: 'seconds'
+          }
+        ]
+      },
+      {
+        id: 'session-2',
+        date: '2024-01-02T00:00:00Z',
+        userId: 'user-1',
+        exercises: [
+          {
+            exerciseName: 'Plank',
+            sets: 1,
+            reps: 1,
+            weight: '90',
+            unit: 'seconds'
+          }
+        ]
       }
-    };
+    ];
     await route.fulfill({ json });
   });
 

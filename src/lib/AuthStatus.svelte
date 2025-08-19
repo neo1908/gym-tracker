@@ -11,6 +11,7 @@
   
   // Use server-side session data from page data
   $: session = $page.data.session;
+  $: allowSignups = $page.data.allowSignups;
 </script>
 
 <div class="auth-status">
@@ -24,7 +25,9 @@
   {:else}
     <div class="auth-links">
       <a href="/login">Login</a>
-      <a href="/signup">Sign Up</a>
+      {#if allowSignups}
+        <a href="/signup">Sign Up</a>
+      {/if}
     </div>
   {/if}
 </div>
