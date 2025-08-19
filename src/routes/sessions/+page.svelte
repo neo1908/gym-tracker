@@ -42,7 +42,7 @@
   
   async function fetchExercises() {
     try {
-      const response = await fetch('/api/exercises');
+      const response = await fetch('/api/exercise-list');
       if (response.ok) {
         const data = await response.json();
         exercises = data.exercises || [];

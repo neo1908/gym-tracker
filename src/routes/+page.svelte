@@ -17,12 +17,31 @@
 	let startDate: string = '';
 	let endDate: string = '';
 	let searchTerm: string = '';
+	let importing = false;
+	
+	async function importFromSheets() {
+		try {
+			importing = true;
+			const response = await fetch('/api/import', {
+				method: 'POST'
+			});
+			
+			const result = await response.json();
+			
+			if (response.ok) {
+				alert(`Import successful! Imported ${result.imported} exercises from ${result.sessions} sessions.`);
+				await loadExerciseData(); // Reload the data
+			} else {
+				alert(`Import failed: ${result.error}`);
+			}
+		} catch (err) {
+			alert(`Import failed: ${err.message}`);
+		} finally {
+			importing = false;
+		}
+	}
 
 	onMount(async () => {
-		if ($page.data.user) {
-			goto('/sessions');
-			return;
-		}
 		await loadExerciseData();
 	});
 	
@@ -30,17 +49,73 @@
 		try {
 			loading = true;
 			error = null;
-			const response = await fetch('/api/exercises');
-			const data: ExercisesResponse | ErrorResponse = await response.json();
 			
-			if ('error' in data) {
-				error = data.error;
-			} else {
-				exercises.set(data.exercises);
-				filteredExercises.set(data.exercises);
-				// Select all exercises by default
-				selectedExercises = new Set(Object.keys($exercises));
+			// Fetch sessions with exercise data from database
+			const response = await fetch('/api/sessions?includeExercises=true');
+			const sessions = await response.json();
+			
+			if (!Array.isArray(sessions)) {
+				error = 'Failed to load exercise data';
+				return;
 			}
+			
+			// Transform database data into the format expected by the charts
+			const exerciseData: Record<string, Exercise> = {};
+			
+			for (const session of sessions) {
+				if (!session.exercises) continue;
+				
+				for (const exercise of session.exercises) {
+					if (!exerciseData[exercise.exerciseName]) {
+						exerciseData[exercise.exerciseName] = {
+							name: exercise.exerciseName,
+							sessions: [],
+							parseErrors: []
+						};
+					}
+					
+					const weight = parseFloat(exercise.weight) || 0;
+					const reps = exercise.reps || 0;
+					
+					exerciseData[exercise.exerciseName].sessions.push({
+						date: new Date(session.date).toLocaleDateString(),
+						sessionNumber: exerciseData[exercise.exerciseName].sessions.length + 1,
+						weight,
+						reps,
+						originalWeight: weight,
+						originalUnit: exercise.unit || 'kg',
+						estimated1RM: weight * (1 + reps / 30),
+						sets: [{
+							weight,
+							reps,
+							originalWeight: weight,
+							originalUnit: exercise.unit || 'kg',
+							setNumber: 1
+						}]
+					});
+				}
+			}
+			
+			// Identify personal records
+			for (const exerciseName in exerciseData) {
+				const exercise = exerciseData[exerciseName];
+				let max1RM = 0;
+				for (const session of exercise.sessions) {
+					if (session.estimated1RM > max1RM) {
+						max1RM = session.estimated1RM;
+					}
+				}
+				for (const session of exercise.sessions) {
+					if (session.estimated1RM === max1RM) {
+						session.isPR = true;
+					}
+				}
+			}
+			
+			exercises.set(exerciseData);
+			filteredExercises.set(exerciseData);
+			// Select all exercises by default
+			selectedExercises = new Set(Object.keys(exerciseData));
 		} catch (err) {
 			error = (err as Error).message;
 		} finally {
@@ -103,22 +178,16 @@
 </svelte:head>
 
 <main>
-	{#if !$page.data.user}
-		<div class="welcome-container">
-			<h1>Welcome to Gym Tracker</h1>
-			<p class="welcome-subtitle">Track your gym sessions and monitor your progress</p>
-			<div class="welcome-actions">
-				<a href="/login" class="btn btn-primary">Login</a>
-				<a href="/signup" class="btn btn-secondary">Sign Up</a>
-			</div>
-			<div class="demo-section">
-				<h2>Demo View - Exercise Progress Charts</h2>
-				<p>Below is a demo of the exercise tracking charts from spreadsheet data:</p>
-			</div>
+	<h1>Gym Progress Tracker</h1>
+	
+	{#if $page.data.user}
+		<div class="action-buttons">
+			<a href="/sessions" class="btn btn-primary">Manage Sessions</a>
+			<button on:click={importFromSheets} class="btn btn-secondary" disabled={importing}>
+				{importing ? 'Importing...' : 'Import from Google Sheets'}
+			</button>
 		</div>
 	{/if}
-	
-	<h1>Gym Progress Tracker</h1>
 	
 	{#if loading}
 		<div class="loading" role="status" aria-live="polite">
@@ -127,13 +196,20 @@
 	{:else if error}
 		<div class="error" role="alert" aria-live="assertive">
 			<p><strong>Error:</strong> {error}</p>
-			<p>Make sure your Google Sheet is shared with the service account email.</p>
+			<p>Please try again or check the database connection.</p>
 			<button on:click={loadExerciseData}>Retry</button>
 		</div>
 	{:else if Object.keys($exercises).length === 0}
 		<div class="empty-state" role="status" aria-live="polite">
-			<p>No exercise data found in the "LPP" sheet.</p>
-			<button on:click={loadExerciseData}>Reload Data</button>
+			<p>No exercise data found.</p>
+			{#if $page.data.user}
+				<p>Start by adding sessions or importing data from Google Sheets.</p>
+				<button on:click={importFromSheets} class="btn btn-primary" disabled={importing}>
+					{importing ? 'Importing...' : 'Import from Google Sheets'}
+				</button>
+			{:else}
+				<p>Please log in to view exercise data.</p>
+			{/if}
 		</div>
 	{:else}
 		<div class="dashboard">
@@ -497,6 +573,13 @@
 	
 	.demo-section p {
 		color: var(--text-secondary);
+	}
+	
+	.action-buttons {
+		display: flex;
+		gap: 1rem;
+		justify-content: center;
+		margin-bottom: 2rem;
 	}
 	
 	/* Responsive design */

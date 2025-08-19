@@ -4,19 +4,58 @@ import { db } from '$lib/server/db';
 import { gymSession, exerciseLog } from '$lib/server/schema';
 import { eq, desc } from 'drizzle-orm';
 
-export const GET: RequestHandler = async ({ locals }) => {
-  if (!locals.user) {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export const GET: RequestHandler = async ({ locals, url }) => {
+  // Allow public read access to exercise data
+  const includeExercises = url.searchParams.get('includeExercises') === 'true';
   
   try {
-    const sessions = await db
-      .select()
-      .from(gymSession)
-      .where(eq(gymSession.userId, locals.user.id))
-      .orderBy(desc(gymSession.date));
-    
-    return json(sessions);
+    if (includeExercises) {
+      // For now, only show data for logged-in user
+      if (!locals.user) {
+        return json([]);
+      }
+      
+      // Fetch sessions with exercise logs for display
+      const sessionsWithExercises = await db
+        .select()
+        .from(gymSession)
+        .leftJoin(exerciseLog, eq(gymSession.id, exerciseLog.gymSessionId))
+        .where(eq(gymSession.userId, locals.user.id))
+        .orderBy(desc(gymSession.date));
+      
+      // Group exercises by session
+      const sessionsMap = new Map();
+      for (const row of sessionsWithExercises) {
+        const session = row.gym_session;
+        const exercise = row.exercise_log;
+        
+        if (!sessionsMap.has(session.id)) {
+          sessionsMap.set(session.id, {
+            ...session,
+            exercises: []
+          });
+        }
+        
+        if (exercise) {
+          sessionsMap.get(session.id).exercises.push(exercise);
+        }
+      }
+      
+      return json(Array.from(sessionsMap.values()));
+    } else {
+      // Simple session list for authenticated users
+      if (!locals.user) {
+        return json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      const sessions = await db
+        .select()
+        .from(gymSession)
+        .where(eq(gymSession.userId, locals.user.id))
+        .orderBy(desc(gymSession.date));
+      
+      return json(sessions);
+    }
   } catch (error) {
     console.error('Failed to fetch sessions:', error);
     if (error instanceof Error && error.message.includes('DATABASE_URL')) {
