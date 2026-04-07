@@ -1,4 +1,7 @@
 > [!IMPORTANT]
+> Due to recent github outages this repo has been migrated to [https://gitlab.com/ValiantElf/gym-tracker](https://gitlab.com/ValiantElf/gym-tracker)
+
+> [!IMPORTANT]
 > Due to recent github outages this repo has been migrated to [https://gitlab.com/ValiantElf/gym-tracker](https://gitlab.com/ValiantElf/gym-tracker)# Gym Progress Tracker
 
 A SvelteKit application that reads workout data from Google Sheets and displays progress charts for each exercise.
